@@ -1,0 +1,330 @@
+! Provera starta !
+lStart: br (if !START then lStart);
+
+
+
+! FETCH !
+lFetch: PCout1, MOST1_2, ldMAR, incPC;
+l1: eMAR, rdCPU, br (if !fcCPU then l1);
+MDRout1, ldIR0;
+br (if !gropr then l5);
+stPRCOD, br lINTR;
+l5: br (if l1 then lEXEC);
+PCout1, MOST1_2, ldMAR, incPC;
+l2: eMAR, rdCPU, br (if !fcCPU then l2);
+MDRout1, ldIR1, ldGPRAR;
+br (if !gradr then l6);
+br lINTR;
+l6: br (if l2_arlog then lADDR);
+br (if l2_brnch then lEXEC);
+PCout1, MOST1_2, ldMAR, incPC;
+l3: eMAR, rdCPU, br (if !fcCPU then l3);
+MDRout1, ldIR2, br (if l3_jump then lEXEC);
+PCout1, MOST1_2, ldMAR, incPC;
+l4: eMAR, rdCPU, br (if !fcCPU then l4);
+MDRout1, ldIR3;
+
+
+
+! ADDR !
+lADDR: bradr;
+
+! <shortimmed> !
+IRPOMout3, MOST3_2, MOST2_1, ldBB, br lEXEC;
+
+! <regdir> !
+br (if ST then lEXEC);
+GPRout1, ldBB, br lEXEC;
+
+! <regind> !
+GPRout1, MOST1_2, ldMAR, ldBW, br lREAD;
+
+! <predec> !
+GPRout1, MOST1_3, ldSP;
+decSP;
+decSP;
+SPout2, ldMAR, ldBW, MOST2_1, MOST1_3, wrGPR, br lREAD;
+
+! <memdir> !
+IRDAout3, MOST3_2, ldMAR, ldBW, br lREAD;
+
+! <memind> !
+IRDAout3, MOST3_2, ldMAR;
+l7: eMAR, rdCPU, br (if !fcCPU then l7);
+MDRout1, ldDWL, incMAR;
+l8: eMAR, rdCPU, br (if !fcCPU then l8);
+MDRout1, ldDWH;
+DWout2, ldMAR, ldBW, br lREAD;
+
+! <immed> !
+IRDAout3, MOST3_2, MOST2_1, ldBB, br lEXEC;
+
+! <bxpostinc> !
+ADDout2, MOST2_1, MOST1_3, ldSP;
+decSP;
+decSP;
+decSP;
+SPout2, MOST2_1, ldGPRAR;
+GPRout1, MOST1_2, ldCW, incGPRAR;
+GPRout1, CWout3, ADDout2, ldMAR, ldBW;
+GPRout1, MOST1_3, ldSP;
+incSP;
+incSP;
+SPout2, MOST2_1, MOST1_3, wrGPR, br lREAD; 
+
+! <read> !
+lREAD: br (if stlen then lEXEC);
+l9: eMAR, rdCPU, br (if !fcCPU then l9);
+MDRout1, ldDWL, incMAR;
+l10: eMAR, rdCPU, br (if !fcCPU then l10);
+MDRout1, ldDWH;
+DWout2, MOST2_1, ldBB, br lEXEC;
+
+
+
+! EXEC !
+lEXEC: bropr;
+
+! <LD> !
+BBout2, MOST2_1, ldAB;
+l14: ldN, ldZ, br lINTR;
+
+! <ST> !
+br (if !regdir then l11);
+ABout3, wrGPR, br lINTR;
+l11: ABout3, MOST3_2, ldAW;
+l16: AWout3, mxMDR, ldMDR;
+l12: eMAR, eMDR, wrCPU, br (if !fcCPU then l12);
+AWHout3, mxMDR, ldMDR, incMAR;
+l13: eMAR, eMDR, wrCPU, br (if !fcCPU then l13);
+br lINTR;
+
+! <ADD> !
+ABout3, BBout2, add, ALUout1, ldAB, ldV, ldC, br l14;
+
+! <SUB> !
+ABout3, BBout2, sub, ALUout1, ldAB, ldV, ldC, br l14;
+
+! <AND> !
+ABout3, BBout2, and, ALUout1, ldAB, br l14;
+
+! <OR> !
+ABout3, BBout2, or, ALUout1, ldAB, br l14;
+
+! <XOR> !
+ABout3, BBout2, xor, ALUout1, ldAB, br l14;
+
+! <INC> !
+BBout2, MOST2_1, MOST1_3, ldSP;
+incSP;
+br (if !regdir then l15);
+SPout2, MOST2_1, MOST1_3, wrGPR, br lINTR;
+l15: SPout2, ldAW;
+BWout2, ldMAR, br l16;
+
+! <NEG> !
+BBout2, MOST2_1, ldAB;
+ABout3, not, ALUout1, ldAB;
+ABout3, ldSP;
+incSP;
+SPout2, MOST2_1, ldAB, br l14;
+
+! <MAX> !
+ABout3, MOST3_2, ldAW;
+ABout3, BBout2, sub, ALUout1, ldAB, ldC, ldV;
+ldN, ldZ;
+ADDout2, MOST2_1, MOST1_3, br (if !brpom then l17);
+AWout3, MOST3_2, MOST2_1, ldAB, br lINTR;
+l17: BBout2, MOST2_1, ldAB, br lINTR; 
+
+! <CMP> !
+ABout3, MOST3_2, ldAW;
+ABout3, BBout2, sub, ALUout1, ldAB, ldC, ldV;
+ldN, ldZ;
+AWout3, MOST3_2, MOST2_1, ldAB, br lINTR;
+
+! <branch> !
+IRBRout3, br (if !brpom then lINTR);
+PCout1, IRPOMout3, ADDout2, ldPC, br lINTR;
+
+! <ASR, LSR, ROR, RORC> !
+shr, ldC, br l14;
+
+! <ASL, LSL, ROL, ROLC> !
+shl, ldC, br l14;
+
+! <INTE> !
+stPSWI, br lINTR;
+
+! <INTD> !
+clPSWI, br lINTR;
+
+! <STIVTP> !
+ABout3, ldIVTP, br lINTR;
+
+! <CLR> !
+ALUout1, ldAB, br l14;
+
+! <HALT> !
+clSTART, br lSTART;
+
+! <JMP> !
+IRJAout2, ldPC, br lINTR;
+
+! <PUSH> !
+ADDout2, MOST2_1, MOST1_3, ldSP;
+decSP;
+SPout2, MOST2_1, ldGPRAR;
+GPRout1, MOST1_3, ldSP;
+incSP;
+SPout2, ldMAR;
+incSP;
+SPout2, MOST2_1, MOST1_3, wrGPR, br l11;
+
+! <POP> !
+ADDout2, MOST2_1, MOST1_3, ldSP;
+decSP;
+SPout2, MOST2_1, ldGPRAR;
+GPRout1, MOST1_3, ldSP;
+SPout2, ldMAR, decSP;
+l18: eMAR, rdCPU, br (if !fcCPU then l18);
+MDRout1, ldDWH, SPout2, ldMAR, decSP;
+SPout2, MOST2_1, MOST1_3, wrGPR;
+l19: eMAR, rdCPU, br (if !fcCPU then l19);
+MDRout1, ldDWL;
+DWout2, MOST2_1, ldAB, br l14;
+
+! <JSR> !
+ADDout2, MOST2_1, MOST1_3, ldSP;
+decSP;
+SPout2, MOST2_1, ldGPRAR;
+GPRout1, MOST1_3, ldSP;
+incSP;
+SPout2, ldMAR;
+incSP;
+SPout2, MOST2_1, MOST1_3, wrGPR;
+PCLout3, mxMDR, ldMDR;
+l20: eMAR, eMDR, wrCPU, br (if !fcCPU then l20);
+PCHout3, mxMDR, ldMDR, incMAR;
+l21: eMAR, eMDR, wrCPU, br (if !fcCPU then l21);
+IRJAout2, ldPC, br lINTR;
+
+! <RTS> !
+ADDout2, MOST2_1, MOST1_3, ldSP;
+decSP;
+SPout2, MOST2_1, ldGPRAR;
+GPRout1, MOST1_3, ldSP;
+l24: SPout2, ldMAR, decSP;
+l22: eMAR, rdCPU, br (if !fcCPU then l22);
+MDRout1, ldDWH, SPout2, ldMAR, decSP;
+SPout2, MOST2_1, MOST1_3, wrGPR;
+l23: eMAR, rdCPU, br (if !fcCPU then l23);
+MDRout1, ldDWL;
+DWout2, ldPC, br lINTR;
+
+! <RTI> !
+ADDout2, MOST2_1, MOST1_3, ldSP;
+decSP;
+SPout2, MOST2_1, ldGPRAR;
+GPRout1, MOST1_3, ldSP;
+SPout2, ldMAR, decSP;
+l25: eMAR, rdCPU, br (if !fcCPU then l25);
+MDRout1, ldPSWH, SPout2, ldMAR, decSP;
+l26: eMAR, rdCPU, br (if !fcCPU then l26);
+MDRout1, ldPSWL, br l24;
+
+! <LEN> !
+ADDout2, MOST2_1, MOST1_3, ldSP;
+incSP;
+SPout2, MOST2_1, ldAB;
+shl, decSP;
+shl;
+shl;
+ABout3, MOST3_2, ldCW;
+l27: eMAR, rdCPU, br (if !fcCPU then l27);
+MDRout1, ldDWL, incMAR;
+l28: eMAR, rdCPU, br (if !fcCPU then l28);
+MDRout1, ldDWH, incMAR;
+DWout2, MOST2_1, ldAB;
+ldZ;
+CWout3, br (if !brpom then l29);
+SPout2, MOST2_1, ldAB, br lINTR;
+l29: incSP, br l27;
+
+
+
+! INTR !
+lINTR: br (if !prekid then lSTART);
+
+! INTR faza 1 !
+ADDout2, MOST2_1, MOST1_3, ldSP;
+decSP;
+SPout2, MOST2_1, ldGPRAR;
+GPRout1, MOST1_3, MOST3_2, ldSP, ldMAR;
+PCLout3, mxMDR, ldMDR, incMAR, incSP;
+l32: eMAR, eMDR, wrCPU, br (if !fcCPU then l32);
+PCHout3, mxMDR, ldMDR, incMAR, incSP;
+l33: eMAR, eMDR, wrCPU, br (if !fcCPU then l33);
+PSWLout3, mxMDR, ldMDR, incMAR, incSP;
+l34: eMAR, eMDR, wrCPU, br (if !fcCPU then l34);
+PSWHout3, mxMDR, ldMDR, incMAR, incSP;
+l35: eMAR, eMDR, wrCPU, br (if !fcCPU then l35);
+SPout2, MOST2_1, MOST1_3, wrGPR;
+
+! INTR faza 2 !
+br (if !PRINS then l39);
+IRPOMout3, ldBR, clPRINS, br l36;
+l39: br (if !PRCOD then l40);
+UINTout3, ldBR, clPRCOD, br l36;
+l40: br (if !PRADR then l41);
+UINTout3, ldBR, clPRADR, br l36;
+l41: br (if !PRINM then l42);
+UINTout3, ldBR, clPRINM, br l36;
+l42: br (if !printr then l43);
+UEXTout3, ldBR, clINTR, br l36;
+l43: UINTout3, ldBR, br l36;
+
+! INTR faza 3 !
+l36: IVTDSPout3, IVTPout1, ADDout2, ldMAR;
+l37: eMAR, rdCPU, br (if !fcCPU then l37);
+MDRout1, ldDWL,incMAR;
+SPout2, MOST2_1, MOST1_3, wrGPR;
+l38: eMAR, rdCPU, br (if !fcCPU then l38);
+MDRout1, ldDWH;
+DWout2, ldPC, clPSWI, clPSWT, br lStart;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
